@@ -85,7 +85,8 @@ angular.module('ngVis', [])
             scope: {
                 data: '=',
                 options: '=',
-                events: '='
+                events: '=',
+                focusedNode: '=?'
             },
             link: function (scope, element, attr) {
                 var networkEvents = [
@@ -121,6 +122,12 @@ angular.module('ngVis', [])
                 ];
 
                 var network = null;
+                var focusOptions = {
+                  scale: 1,
+                  animation: {
+                    easingFunction: 'easeInCubic'
+                  }
+                };
 
                 scope.$watch('data', function () {
                     // Sanity check
@@ -156,6 +163,12 @@ angular.module('ngVis', [])
                         return;
                     }
                     network.setOptions(options);
+                });
+
+                scope.$watch('focusedNode', function (focusedNode) {
+                    if (network && focusedNode) {
+                        network.focus(focusedNode, focusOptions);
+                    }
                 });
             }
         };
