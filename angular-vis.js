@@ -123,10 +123,10 @@ angular.module('ngVis', [])
 
                 var network = null;
                 var focusOptions = {
-                  scale: 1,
-                  animation: {
-                    easingFunction: 'easeInCubic'
-                  }
+                    scale: 1,
+                    animation: {
+                        easingFunction: 'easeInCubic'
+                    }
                 };
 
                 scope.$watch('data', function () {
@@ -141,7 +141,7 @@ angular.module('ngVis', [])
                         network.destroy();
                     }
 
-                    // Create the graph2d object
+                    // Create the network object
                     network = new vis.Network(element[0], scope.data, scope.options);
 
                     // Attach an event handler if defined
@@ -165,6 +165,7 @@ angular.module('ngVis', [])
                     network.setOptions(options);
                 });
 
+                // watch the attribute focusedNode to zoom it when it changes
                 scope.$watch('focusedNode', function (focusedNode) {
                     if (network && focusedNode) {
                         network.focus(focusedNode, focusOptions);
