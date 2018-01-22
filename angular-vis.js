@@ -1,8 +1,8 @@
 angular.module('ngVis', [])
 
-.factory('VisDataSet', function () {
+.factory('VisDataSet', function() {
   'use strict';
-  return function (data, options) {
+  return function(data, options) {
     // Create the new dataSets
     return new vis.DataSet(data, options);
   };
@@ -11,7 +11,7 @@ angular.module('ngVis', [])
 /**
 * TimeLine directive
 */
-.directive('visTimeline', function () {
+.directive('visTimeline', function() {
   'use strict';
   return {
     restrict: 'EA',
@@ -21,7 +21,7 @@ angular.module('ngVis', [])
       options: '=',
       events: '='
     },
-    link: function (scope, element, attr) {
+    link: function(scope, element, attr) {
       var timelineEvents = [
         'rangechange',
         'rangechanged',
@@ -36,7 +36,7 @@ angular.module('ngVis', [])
       // Declare the timeline
       var timeline = null;
 
-      scope.$watch('data', function () {
+      scope.$watch('data', function() {
         // Sanity check
         if (scope.data == null) {
           return;
@@ -52,7 +52,7 @@ angular.module('ngVis', [])
         timeline = new vis.Timeline(element[0], scope.data.items, scope.data.groups, scope.options);
 
         // Attach an event handler if defined
-        angular.forEach(scope.events, function (callback, event) {
+        angular.forEach(scope.events, function(callback, event) {
           if (timelineEvents.indexOf(String(event)) >= 0) {
             timeline.on(event, callback);
           }
@@ -64,7 +64,7 @@ angular.module('ngVis', [])
         }
       });
 
-      scope.$watchCollection('options', function (options) {
+      scope.$watchCollection('options', function(options) {
         if (timeline == null) {
           return;
         }
@@ -77,17 +77,19 @@ angular.module('ngVis', [])
 /**
 * Directive for network chart.
 */
-.directive('visNetwork', function () {
+.directive('visNetwork', function() {
   return {
     restrict: 'EA',
+    templateUrl: 'libs/angular-visjs/network.html',
     transclude: false,
     scope: {
       data: '=',
       options: '=',
       events: '=',
-      focusedNode: '=?'
+      manipulation: '=?',
+      search: '=?'
     },
-    link: function (scope, element, attr) {
+    link: function(scope, element, attr) {
       var networkEvents = [
         'click',
         'doubleClick',
@@ -117,9 +119,9 @@ angular.module('ngVis', [])
         'beforeDrawing',
         'afterDrawing',
         'animationFinished'
-
       ];
 
+      var container = document.getElementById('arch-vis-network');
       var network = null;
       var group1Clusters = [];
       var focusOptions = {
@@ -129,7 +131,14 @@ angular.module('ngVis', [])
         }
       };
 
-      scope.$watch('data', function () {
+      scope.showEditNode = false;
+      scope.showEditEdge = false;
+      scope.showDelete = false;
+      scope.showBack = false;
+      scope.showSearch = false;
+      scope.filterString = '';
+
+      scope.$watch('data', function() {
         // Sanity check
         if (scope.data == null) {
           return;
@@ -142,7 +151,7 @@ angular.module('ngVis', [])
         }
 
         // Create the network object
-        network = new vis.Network(element[0], scope.data, scope.options);
+        network = new vis.Network(container, scope.data, scope.options);
 
         // Scan all the nodes and populate the cluster array with all the available groups
         angular.forEach(scope.data.nodes, function(node) {
@@ -155,7 +164,7 @@ angular.module('ngVis', [])
         makeClusters();
 
         // Attach an event handler if defined
-        angular.forEach(scope.events, function (callback, event) {
+        angular.forEach(scope.events, function(callback, event) {
           if (networkEvents.indexOf(String(event)) >= 0) {
             network.on(event, callback);
           }
@@ -166,57 +175,130 @@ angular.module('ngVis', [])
           scope.events.onload(network);
         }
 
-        // When the user clicks on a cluster open it
-        network.on("selectNode", function (params) {
+        // On nodes or edges selection manage the optional buttons
+        network.on("select", function(params) {
+          // if the clicked element is a cluster, open it...
           if (params.nodes.length == 1 && network.isCluster(params.nodes[0])) {
             network.openCluster(params.nodes[0])
+          }
+          // ...if one edge is selected and no nodes are selected, show the edit and the delete edge button...
+          else if (params.edges.length == 1 && params.nodes.length == 0) {
+            scope.showEditNode = false;
+            scope.showEditEdge = true;
+            scope.showDelete = true;
+          }
+          // ...if at least one node is selected, show the edit and the delete node button...
+          else if (params.nodes.length > 0) {
+            scope.showEditNode = true;
+            scope.showEditEdge = false;
+            scope.showDelete = true;
+          }
+          // ...otherwise hide all the optional buttons
+          else {
+            scope.showEditNode = false;
+            scope.showEditEdge = false;
+            scope.showDelete = false;
           }
         });
 
         // When the zooms out recreate all the clusters
-        network.on('zoom', function (params) {
+        network.on('zoom', function(params) {
           if (params.scale < 1) {
             makeClusters();
           }
         });
-
-        // Create node clusters accoding to the available groups
-        function makeClusters() {
-          for (var i = 0; i < group1Clusters.length; i++) {
-            var clusterOptions = {
-              joinCondition: function(nodeOptions) {
-                return nodeOptions.group1 === group1Clusters[i];
-              },
-              clusterNodeProperties: {
-                id: 'cluster_' + group1Clusters[i],
-                label: group1Clusters[i],
-                shape: 'circle',
-                margin: 10,
-                color: 'rgb(0,87,126)',
-                font: {
-                  color: 'white'
-                }
-              }
-            };
-
-            network.cluster(clusterOptions);
-          }
-        }
       });
 
-      scope.$watchCollection('options', function (options) {
+      scope.$watchCollection('options', function(options) {
         if (network == null) {
           return;
         }
         network.setOptions(options);
       });
 
-      // watch the attribute focusedNode to zoom it when it changes
-      scope.$watch('focusedNode', function (focusedNode) {
-        if (network && focusedNode) {
-          network.focus(focusedNode, focusOptions);
+      // watch the attribute filterString to zoom on the searched node when it changes
+      scope.$watch('filterString', function(filterString) {
+        if (network && filterString) {
+          network.focus(filterString, focusOptions);
         }
       });
+
+      // function invoked when the user clicks on the search button
+      scope.searchNode = function() {
+        scope.filterString = '';
+        scope.showSearch = true;
+        scope.showBack = true;
+        scope.backHint = '';
+      };
+
+      // function invoked when the user clicks on the back button
+      scope.back = function() {
+        network.disableEditMode();
+        scope.showBack = false;
+      };
+
+      // function invoked when the user clicks on the add node button
+      scope.addNode = function() {
+        network.addNodeMode();
+        scope.showBack = true;
+        scope.showSearch = false;
+        scope.showEditNode = false;
+        scope.showEditEdge = false;
+        scope.showDelete = false;
+        scope.backHint = 'Click in an empty space to place a new node';
+      };
+
+      // function invoked when the user clicks on the add edge button
+      scope.addEdge = function() {
+        network.addEdgeMode();
+        scope.showBack = true;
+        scope.showSearch = false;
+        scope.showEditNode = false;
+        scope.showEditEdge = false;
+        scope.showDelete = false;
+        scope.backHint = 'Click on a node and drag the edge to another node to connect them';
+      };
+
+      // function invoked when the user clicks on the edit node button
+      scope.editNode = function() {
+        network.editNode();
+      };
+
+      // function invoked when the user clicks on the edit edge button
+      scope.editEdge = function() {
+        network.editEdgeMode();
+      };
+
+      // function invoked when the user clicks on the delete button
+      scope.delete = function() {
+        network.deleteSelected();
+        scope.showEditNode = false;
+        scope.showEditEdge = false;
+        scope.showDelete = false;
+      };
+
+      // Create node clusters accoding to the available groups
+      function makeClusters() {
+        for (var i = 0; i < group1Clusters.length; i++) {
+          var clusterOptions = {
+            joinCondition: function(nodeOptions) {
+              return nodeOptions.group1 === group1Clusters[i];
+            },
+            clusterNodeProperties: {
+              id: 'cluster_' + group1Clusters[i],
+              label: group1Clusters[i],
+              shape: 'circle',
+              margin: 10,
+              color: 'rgb(0,87,126)',
+              font: {
+                color: 'white'
+              }
+            }
+          };
+
+          network.cluster(clusterOptions);
+        }
+      }
     }
   };
 })
@@ -224,7 +306,7 @@ angular.module('ngVis', [])
 /**
 * Directive for graph2d.
 */
-.directive('visGraph2d', function () {
+.directive('visGraph2d', function() {
   'use strict';
   return {
     restrict: 'EA',
@@ -234,7 +316,7 @@ angular.module('ngVis', [])
       options: '=',
       events: '='
     },
-    link: function (scope, element, attr) {
+    link: function(scope, element, attr) {
       var graphEvents = [
         'rangechange',
         'rangechanged',
@@ -246,7 +328,7 @@ angular.module('ngVis', [])
       // Create the chart
       var graph = null;
 
-      scope.$watch('data', function () {
+      scope.$watch('data', function() {
         // Sanity check
         if (scope.data == null) {
           return;
@@ -262,7 +344,7 @@ angular.module('ngVis', [])
         graph = new vis.Graph2d(element[0], scope.data.items, scope.data.groups, scope.options);
 
         // Attach an event handler if defined
-        angular.forEach(scope.events, function (callback, event) {
+        angular.forEach(scope.events, function(callback, event) {
           if (graphEvents.indexOf(String(event)) >= 0) {
             graph.on(event, callback);
           }
@@ -274,7 +356,7 @@ angular.module('ngVis', [])
         }
       });
 
-      scope.$watchCollection('options', function (options) {
+      scope.$watchCollection('options', function(options) {
         if (graph == null) {
           return;
         }

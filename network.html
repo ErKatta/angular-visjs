@@ -1,0 +1,33 @@
+<div ng-show="manipulation" layout="row" layout-align="center center">
+  <div ng-show="showBack" layout="row" layout-align="center center">
+    <arch-button label="Back" icon="arrow_back" click="back()" />
+    <div ng-if="backHint" class="md-subhead">
+      {{backHint}}
+    </div>
+    <md-input-container ng-show="showSearch" md-no-float>
+      <input type="text" ng-model="filterString" placeholder="Search" arch-focus="showSearch">
+    </md-input-container>
+  </div>
+  <div ng-show="!showBack" layout="row" layout-align="center center">
+    <arch-button label="Search" icon="search" click="searchNode()" />
+    <arch-button label="Add node" icon="add" click="addNode()" />
+    <arch-button label="Add edge" icon="add" click="addEdge()" />
+    <arch-button ng-show="showEditNode" label="Edit node" icon="edit" click="editNode()" />
+    <arch-button ng-show="showEditEdge" label="Edit edge" icon="edit" click="editEdge()" />
+    <arch-button ng-show="showDelete" label="Delete selected" icon="delete" click="delete()" />
+  </div>
+</div>
+
+<div ng-show="search" layout="row" layout-align="center center">
+  <div ng-show="showBack" layout="row" layout-align="center center">
+    <arch-button label="Back" icon="arrow_back" click="back()" />
+    <md-input-container ng-show="showSearch" md-no-float>
+      <input type="text" ng-model="filterString" placeholder="Search" arch-focus="showSearch">
+    </md-input-container>
+  </div>
+  <div ng-show="!showBack">
+    <arch-button label="Search" icon="search" click="searchNode()" />
+  </div>
+</div>
+
+<div id="arch-vis-network"></div>
